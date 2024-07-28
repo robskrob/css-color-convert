@@ -1,9 +1,30 @@
 import fs from 'node:fs';
 
+const UNEVEN_HEX_DISTRIBUTION = 2;
+const TRANSPARENCY_VALUE = 3;
+const BASE_SIXTEEN = 16;
+const RGB_MAX_VALUE = 255;
+const COLOR_UNIT= 1;
+
+const calculateOneHexValue = (hex) => {
+  return hex2number(hex[0]) * BASE_SIXTEEN + hex2number(hex[0] || '0')
+}
+
+const calculateTwoHexValues = (hex) => {
+  return hex2number(hex[0]) * BASE_SIXTEEN + hex2number(hex[1] || '0')
+}
+
+const calculateTransparency = (hex) => {
+  return hex2number(hex[1]) * BASE_SIXTEEN + hex2number(hex[0] || '0')
+}
+
+const splitIntoThreePositions = (tuples) => {
+  return tuples[0].split('').concat(tuples[1]);
+}
 
 (async () => {
 
-  const contents = await fs.readFileSync('./color-convert/advanced.css', 'utf8');
+  const contents = await fs.readFileSync('./color-convert/simple.css', 'utf8');
     const result = contents.split("\n").reduce((acc, chunk) => {
       const match = chunk.match(/\#(.*?)\;/)
       const hexColor = match && match[0];
@@ -11,27 +32,27 @@ import fs from 'node:fs';
         const hexTuples = hexColor.replace('#', '').replace(';', '').match(/.{0,2}/g).filter((h) => !!h);
         const length = hexTuples.length
         let rgb;
-        if (length > 2) {
+        if (length > UNEVEN_HEX_DISTRIBUTION) {
           rgb = hexTuples.reduce((acc, hexPair, index) => {
             const hexValue = hexPair.split('');
-            if (index === 3) {
-              const transparency = hex2number(hexValue[0]) * 16 + hex2number(hexValue[1] || '0')
-              acc.push(`/ ${transparency / 255}`);
+            if (index === TRANSPARENCY_VALUE) {
+              const transparency = calculateTwoHexValues(hexValue);
+              acc.push(`/ ${transparency / RGB_MAX_VALUE}`);
             } else {
-              acc.push(hex2number(hexValue[0]) * 16 + hex2number(hexValue[1] || '0'));
+              acc.push(calculateTwoHexValues(hexValue));
             }
             return acc;
           }, []);
         } else {
-          const reformatted = hexTuples[0].split('').concat(hexTuples[1]);
+          const reformatted = splitIntoThreePositions(hexTuples);
           rgb = reformatted.reduce((acc, hex, index) => {
             const hexValue = hex.split('');
-            if (hexValue.length > 1) {
-              acc.push(hex2number(hexValue[0]) * 16 + hex2number(hexValue[0] || '0'));
-              const transparency = hex2number(hexValue[1]) * 16 + hex2number(hexValue[1] || '0')
-              acc.push(`/ ${transparency / 255}`);
+            if (hexValue.length > COLOR_UNIT) {
+              acc.push(calculateOneHexValue(hexValue));
+              const transparency = calculateTransparency(hexValue)
+              acc.push(`/ ${transparency / RGB_MAX_VALUE}`);
             } else {
-              acc.push(hex2number(hexValue[0]) * 16 + hex2number(hexValue[0] || '0'));
+              acc.push(calculateOneHexValue(hexValue));
             }
 
             return acc;
